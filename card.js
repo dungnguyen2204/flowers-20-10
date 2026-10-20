@@ -1,18 +1,13 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'flower.greeting.20-10.v1';
   const defaultGreeting = {
-    recipient: 'bạn',
-    message: 'Nhân ngày Phụ nữ Việt Nam 20/10, chúc bạn luôn khỏe mạnh, bình an và có thật nhiều niềm vui.\n\nMong bạn được yêu thương từ những điều nhỏ nhất, có thời gian cho bản thân và tự tin theo đuổi những điều mình mong muốn.\n\nHôm nay và cả những ngày sau, hãy luôn mỉm cười theo cách của riêng bạn nhé.',
-    sender: 'Một người quý mến bạn'
+    recipient: 'em',
+    message: 'Tuy chúng mình chỉ mới đồng hành cùng nhau một khoảng thời gian ngắn, nhưng mỗi ngày có em ở bên đều mang lại cho anh cảm giác thật bình yên và ngọt ngào.\n\nCảm ơn Huệ vì đã xuất hiện. Anh chúc em bé luôn vui vẻ, mỉm cười thật nhiều và luôn cảm thấy hạnh phúc khi ở bên anh. Mong rằng quãng thời gian sắp tới, hai đứa mình sẽ cùng nhau viết nên thật nhiều kỷ niệm đẹp nhé!',
+    sender: 'Dũng deptraii'
   };
   const dialog = document.getElementById('greetingCard');
   const openButton = document.getElementById('openCard');
-  const reading = document.getElementById('cardReading');
-  const editor = document.getElementById('cardEditor');
-  const editButton = document.getElementById('editCard');
-  const status = document.getElementById('cardStatus');
   const closeButton = document.getElementById('closeCard');
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const desktopLayout = window.matchMedia('(min-width: 1100px)');
@@ -30,7 +25,7 @@
   let albumRevealPromise;
   function revealAlbum() {
     if (albumRevealPromise) return albumRevealPromise;
-    // Restore saved photos and decode them before revealing the paper frames.
+    // Decode the original album photos before revealing the paper frames.
     const photos = [...album.querySelectorAll('img')];
     photos.forEach(photo => { photo.loading = 'eager'; });
     albumRevealPromise = Promise.resolve(window.albumPhotosReady)
@@ -42,11 +37,6 @@
     return albumRevealPromise;
   }
 
-  albumToggle.addEventListener('click', () => {
-    const expanded = album.classList.toggle('is-spread');
-    albumToggle.setAttribute('aria-expanded', String(expanded));
-    albumToggle.innerHTML = expanded ? 'Gấp album <span aria-hidden="true">♡</span>' : 'Xòe album <span aria-hidden="true">♡</span>';
-  });
   document.getElementById('viewAlbum').addEventListener('click', async () => {
     await revealAlbum();
     album.classList.add('is-revealed');
@@ -90,15 +80,12 @@
     if (dialog.open === open) return;
     reflowScene(() => {
       if (open) {
-        showReading();
-        status.textContent = '';
         // A non-modal dialog participates in the page grid and reserves its own space.
         document.body.classList.add('card-open');
         dialog.show();
       } else {
         dialog.close();
         document.body.classList.remove('card-open');
-        showReading();
       }
       openButton.setAttribute('aria-expanded', String(open));
       openButton.querySelector('.envelope-action').textContent = open ? 'Gấp thiệp' : 'Mở thiệp';
@@ -123,22 +110,7 @@
       layoutAnimations.clear();
     }
   });
-  const inputs = {
-    recipient: document.getElementById('recipientInput'),
-    message: document.getElementById('messageInput'),
-    sender: document.getElementById('senderInput')
-  };
   let greeting = { ...defaultGreeting };
-
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && Object.keys(inputs).every(key => typeof saved[key] === 'string'
-      && saved[key].trim().length > 0 && saved[key].length <= inputs[key].maxLength)) {
-      greeting = Object.fromEntries(Object.keys(inputs).map(key => [key, saved[key].trim()]));
-    }
-  } catch {
-    // The default letter stays usable when storage is unavailable or malformed.
-  }
 
   function renderGreeting() {
     document.getElementById('cardRecipient').textContent = greeting.recipient;
@@ -150,13 +122,6 @@
     });
     document.getElementById('cardMessage').replaceChildren(...paragraphs);
     document.getElementById('cardSender').textContent = greeting.sender;
-  }
-
-  function showReading() {
-    reading.hidden = false;
-    editor.hidden = true;
-    dialog.setAttribute('aria-labelledby', 'cardTitle');
-    dialog.scrollTop = 0;
   }
 
   document.addEventListener('bouquet:ready', () => { openButton.hidden = false; });
@@ -186,47 +151,6 @@
     document.body.classList.remove('card-open');
     openButton.setAttribute('aria-expanded', 'false');
     openButton.querySelector('.envelope-action').textContent = 'Mở thiệp';
-    showReading();
-  });
-
-  editButton.addEventListener('click', () => {
-    Object.keys(inputs).forEach(key => {
-      inputs[key].value = greeting[key];
-      inputs[key].setCustomValidity('');
-    });
-    reading.hidden = true;
-    editor.hidden = false;
-    status.textContent = '';
-    dialog.setAttribute('aria-labelledby', 'editorTitle');
-    dialog.scrollTop = 0;
-    inputs.recipient.focus({ preventScroll: true });
-    revealCard();
-  });
-  document.getElementById('cancelEdit').addEventListener('click', () => {
-    showReading();
-    editButton.focus({ preventScroll: true });
-    revealCard();
-  });
-  Object.values(inputs).forEach(input => {
-    input.addEventListener('input', () => input.setCustomValidity(''));
-  });
-  editor.addEventListener('submit', event => {
-    event.preventDefault();
-    for (const input of Object.values(inputs)) {
-      input.setCustomValidity(input.value.trim() ? '' : 'Bạn viết vài chữ vào đây nhé.');
-    }
-    if (!editor.reportValidity()) return;
-    greeting = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value.trim()]));
-    renderGreeting();
-    showReading();
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(greeting));
-      status.textContent = 'Đã lưu lời chúc của bạn.';
-    } catch {
-      status.textContent = 'Đã cập nhật thiệp. Trình duyệt chưa cho phép lưu để dùng lần sau.';
-    }
-    editButton.focus({ preventScroll: true });
-    revealCard();
   });
   renderGreeting();
 })();
